@@ -13,6 +13,6 @@ $db->select();
 // }
 
 //insert using the default query function
-$ret = $db->query("INSERT INTO _users (pk_user_id, firstname) VALUES(NULL,'Rakib')");
+$ret = $db->query("INSERT INTO _users (pk_user_id, firstname) VALUES(NULL,'Rakib'),(NULL,'Sakib')");
 echo '<pre>';
 print_r($ret);
