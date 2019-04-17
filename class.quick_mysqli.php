@@ -145,9 +145,10 @@ class Quick_Mysqli
 
             if ( preg_match( "/^(insert|replace)\s+/i", $query ) ) {
                 $this->insert_id = @$this->dbh->insert_id;
+                $return_val = $this->insert_id;
             }
-
-            $return_val = $this->rows_affected;
+            else
+                $return_val = $this->rows_affected;
         } else { // Query was a Data Query Query (select, show, ...)
             $return_val = $this->result->num_rows;
         }
