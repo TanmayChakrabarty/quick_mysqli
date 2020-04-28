@@ -1,5 +1,5 @@
-<?php 
-if ( ! function_exists ('mysqli_connect') ) die('<b>Fatal Error:</b> quick_mysqli requires mySQLi Lib to be compiled and or linked in to the PHP engine');
+<?php
+if (!function_exists('mysqli_connect')) die('<b>Fatal Error:</b> quick_mysqli requires mySQLi Lib to be compiled and or linked in to the PHP engine');
 
 defined('QUICK_MYSQLI_VERSION') or define('QUICK_MYSQLI_VERSION', '1.0');
 defined('AS_RAW') or define('AS_RAW', 'AS_RAW');
@@ -20,8 +20,9 @@ class Quick_Mysqli
     var $all_queries = array();
     var $num_queries = 0;
     var $result = null;
+    var $captured_errors = array();
 
-    function __construct( $dbuser='', $dbpassword='', $dbname='', $dbhost='localhost', $encoding='utf8', $dbport=3306 ) 
+    function __construct($dbuser = '', $dbpassword = '', $dbname = '', $dbhost = 'localhost', $encoding = 'utf8', $dbport = 3306)
     {
         $this->dbuser = $dbuser;
         $this->dbpassword = $dbpassword;
@@ -31,14 +32,14 @@ class Quick_Mysqli
         $this->encoding = $encoding;
     }
 
-    function connect( ) 
+    function connect()
     {
         $return_val = false;
 
-        $this->dbh = new mysqli( $this->dbhost, $this->dbuser, $this->dbpassword, '', $this->dbport );
- 
-        if( $this->dbh->connect_error ) {
-            trigger_error( 'MySQLi Connection error in '.__FILE__.' on line '.__LINE__, E_USER_ERROR ) ;
+        $this->dbh = new mysqli($this->dbhost, $this->dbuser, $this->dbpassword, '', $this->dbport);
+
+        if ($this->dbh->connect_error) {
+            trigger_error('MySQLi Connection error in ' . __FILE__ . ' on line ' . __LINE__, E_USER_ERROR);
         } else {
             $return_val = true;
             $this->conn_queries = 0;
@@ -47,64 +48,67 @@ class Quick_Mysqli
         return $return_val;
     }
 
-    function select( ) {
+    function select()
+    {
         $return_val = false;
 
-        if ( !$this->dbh ) {
-            trigger_error( 'You are trying to select a DB without having an active connection'.' in '.__FILE__.' on line '.__LINE__, E_USER_ERROR );
-        } else if ( !@$this->dbh->select_db($this->dbname) ) {
+        if (!$this->dbh) {
+            trigger_error('You are trying to select a DB without having an active connection' . ' in ' . __FILE__ . ' on line ' . __LINE__, E_USER_ERROR);
+        } else if (!@$this->dbh->select_db($this->dbname)) {
             // Try to get error supplied by mysql if not use our own
-            if ( !$str = @$this->dbh->error ) $str = 'Unexpected error while trying to select a DB';
-            trigger_error( $str.' in '.__FILE__.' on line '.__LINE__, E_USER_ERROR );
+            if (!$str = @$this->dbh->error) $str = 'Unexpected error while trying to select a DB';
+            trigger_error($str . ' in ' . __FILE__ . ' on line ' . __LINE__, E_USER_ERROR);
         } else {
-            if( $this->encoding ) {
-                $encoding = strtolower( str_replace( "-", "", $this->encoding ) );
+            if ($this->encoding) {
+                $encoding = strtolower(str_replace("-", "", $this->encoding));
                 $charsets = array();
-                $result = $this->dbh->query( "SHOW CHARACTER SET" );
-                while( $row = $result->fetch_array( MYSQLI_ASSOC ) ) {
+                $result = $this->dbh->query("SHOW CHARACTER SET");
+                while ($row = $result->fetch_array(MYSQLI_ASSOC)) {
                     $charsets[] = $row["Charset"];
                 }
-                if( in_array( $encoding, $charsets ) ) {
-                    $this->dbh->set_charset( $encoding );
+                if (in_array($encoding, $charsets)) {
+                    $this->dbh->set_charset($encoding);
                 }
             }
-            
+
             $return_val = true;
         }
         return $return_val;
     }
 
-    function escape( $str ) {
-        if ( ! isset($this->dbh) || ! $this->dbh ) {
+    function escape($str)
+    {
+        if (!isset($this->dbh) || !$this->dbh) {
             return false;
-        } 
-                    
-        if ( get_magic_quotes_gpc() ) {
-            $str = stripslashes( $str );
-        }                        
+        }
 
-        return $this->dbh->escape_string( $str );
+        if (get_magic_quotes_gpc()) {
+            $str = stripslashes($str);
+        }
+
+        return $this->dbh->escape_string($str);
     }
 
-    function deep_escape( $value ){
-        if( is_array( $value ) ){
-            foreach( $value as $i=>$v ){
-                if( is_array( $v ) ) $value[$i] = $this->deep_escape( $v );
-                else $value[$i] = $this->escape( $v );
-                }
+    function deep_escape($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as $i => $v) {
+                if (is_array($v)) $value[$i] = $this->deep_escape($v);
+                else $value[$i] = $this->escape($v);
             }
-        else $value = $this->escape( $value );
-        
+        } else $value = $this->escape($value);
+
         return $value;
     }
 
-    function query( $query ) {
-        if ( $this->num_queries >= 500 ) {
+    function query($query)
+    {
+        if ($this->num_queries >= 500) {
             $this->disconnect();
             $connected = $this->connect();
-            if( $connected ) {
+            if ($connected) {
                 $selected = $this->select();
-                if( !$selected ) {
+                if (!$selected) {
                     return false;
                 }
             } else {
@@ -114,17 +118,17 @@ class Quick_Mysqli
 
         $return_val = 0;
 
-        $query = trim( $query );
+        $query = trim($query);
 
         $this->all_queries[] = $query;
 
         $this->num_queries++;
-        
-        if ( !isset($this->dbh) || !$this->dbh ) {
+
+        if (!isset($this->dbh) || !$this->dbh) {
             $connected = $this->connect();
-            if( $connected ) {
+            if ($connected) {
                 $selected = $this->select();
-                if( !$selected ) {
+                if (!$selected) {
                     return false;
                 }
             } else {
@@ -132,22 +136,21 @@ class Quick_Mysqli
             }
         }
 
-        if( is_object( @$this->result ) ) @$this->result->free_result();
-        $this->result = @$this->dbh->query( $query );
+        if (is_object(@$this->result)) @$this->result->free_result();
+        $this->result = @$this->dbh->query($query);
 
-        if ( $str = @$this->dbh->error ) {
-            trigger_error( $str, E_USER_WARNING );
+        if ($str = @$this->dbh->error) {
+            trigger_error($str, E_USER_WARNING);
             return false;
         }
-        
-        if ( !is_object($this->result) ) { // Query was a Data Manipulation Query (insert, delete, update, replace, ...)
+
+        if (!is_object($this->result)) { // Query was a Data Manipulation Query (insert, delete, update, replace, ...)
             $this->rows_affected = @$this->dbh->affected_rows;
 
-            if ( preg_match( "/^(insert|replace)\s+/i", $query ) ) {
+            if (preg_match("/^(insert|replace)\s+/i", $query)) {
                 $this->insert_id = @$this->dbh->insert_id;
                 $return_val = $this->insert_id;
-            }
-            else
+            } else
                 $return_val = $this->rows_affected;
         } else { // Query was a Data Query Query (select, show, ...)
             $return_val = $this->result->num_rows;
@@ -156,57 +159,66 @@ class Quick_Mysqli
         return $return_val;
     }
 
-    function disconnect( ) {
+    function disconnect()
+    {
         $this->conn_queries = 0;
         @$this->dbh->close();
     }
 
-    function get_row( $query, $format = OBJECT) {
-        if ( $query ){
-            $this->query( $query );
-            }
+    function get_row($query, $format = OBJECT)
+    {
+        if ($this->result)
+            @$this->result->free_result();
 
-        if( $format == AS_RAW ) {
-            trigger_error( 'get_row() method does not support format AS_RAW in Quick_Mysqli', E_USER_ERROR );
-        } else if ( $format == OBJECT ) {
+        if ($query) {
+            $qRet = $this->query($query);
+            if ($qRet === false) return false;
+        }
+
+        if ($format == AS_RAW) {
+            trigger_error('get_row() method does not support format AS_RAW in Quick_Mysqli', E_USER_ERROR);
+        } else if ($format == OBJECT) {
             $result = null;
-            while ( $row = @$this->result->fetch_object() ) {
+            while ($row = @$this->result->fetch_object()) {
                 $result = $row;
                 break;
             }
-
             @$this->result->free_result();
             return $result;
-        } else if ( $format == ARRAY_A ) {
+        } else if ($format == ARRAY_A) {
             $result = null;
-            while ( $row = @$this->result->fetch_assoc() ) {
+            while ($row = @$this->result->fetch_assoc()) {
                 $result = $row;
             }
-
             @$this->result->free_result();
             return $result;
         } else {
             $result = null;
-            while ( $row = @$this->result->fetch_array( MYSQLI_NUM ) ) {
-                $result = $row;   
+            while ($row = @$this->result->fetch_array(MYSQLI_NUM)) {
+                $result = $row;
             }
             @$this->result->free_result();
             return $result;
         }
     }
 
-    function get_results( $query, $index_with = null, $format = OBJECT) {
-        if ( $query ){
-            $this->query( $query );
-            }
+    function get_results($query, $index_with = null, $format = OBJECT)
+    {
+        if ($this->result)
+            @$this->result->free_result();
+
+        if ($query) {
+            $qRet = $this->query($query);
+            if ($qRet === false) return false;
+        }
 
         // Send back array of objects. Each row is an object
-        if( $format == AS_RAW ) {
+        if ($format == AS_RAW) {
             return $this->result;
-        } else if ( $format == OBJECT ) {
+        } else if ($format == OBJECT) {
             $result = array();
-            while ( $row = @$this->result->fetch_object() ) {
-                if( $index_with ) {
+            while ($row = @$this->result->fetch_object()) {
+                if ($index_with) {
                     $result[$row->$index_with] = $row;
                 } else {
                     $result[] = $row;
@@ -215,10 +227,10 @@ class Quick_Mysqli
 
             @$this->result->free_result();
             return $result;
-        } else if ( $format == ARRAY_A ) {
+        } else if ($format == ARRAY_A) {
             $result = array();
-            while ( $row = @$this->result->fetch_assoc() ) {
-                if($index_with) {
+            while ($row = @$this->result->fetch_assoc()) {
+                if ($index_with) {
                     $result[$row[$index_with]] = $row;
                 } else {
                     $result[] = $row;
@@ -229,25 +241,96 @@ class Quick_Mysqli
             return $result;
         } else {
             $result = array();
-            if( $index_with ) {
+            if ($index_with) {
                 $index_num = null;
-                while( $col = $this->result->fetch_field() ) {
-                    $index_num = is_null( $index_num ) ? 0 : ++$index_num;
-                    if( $col->name == $index_with ) {
+                while ($col = $this->result->fetch_field()) {
+                    $index_num = is_null($index_num) ? 0 : ++$index_num;
+                    if ($col->name == $index_with) {
                         break;
                     }
                 }
             }
-            while ( $row = @$this->result->fetch_array( MYSQLI_NUM ) ) {
-                if( $index_with ) {
+            while ($row = @$this->result->fetch_array(MYSQLI_NUM)) {
+                if ($index_with) {
                     $result[$row[$index_num]] = $row;
                 } else {
                     $result[] = $row;
                 }
-                
+
             }
             @$this->result->free_result();
             return $result;
         }
+    }
+
+    function insert($table, $data)
+    {
+        $sql = "INSERT INTO " . $table . "(";
+
+        foreach ($data as $i => $v) {
+            //if(is_array($i)) pre($i);
+            $sql .= "`" . $this->escape($i) . "`,";
+        }
+        $sql = rtrim($sql, ",") . ") VALUES(";
+
+        foreach ($data as $i => $v) {
+            $v = $this->escape($v);
+            $i = $this->escape($i);
+
+            $sql .= "'" . $v . "', ";
+        }
+
+        $sql = rtrim($sql, ", ").')';
+
+        $query = $this->query($sql);
+
+        $ret = array();
+
+        if ($query !== false) {
+            $ret['success'] = $this->insert_id;
+        } else {
+            if ($this->captured_errors) {
+                foreach ($this->captured_errors as $i => $e) {
+                    $ret['error'][] = $e['error_str'];
+                }
+            }
+            else $ret['error'][] = 'Undefined error occurred.';
+        }
+
+        return $ret;
+    }
+
+    function update($table, $data, $condition = '')
+    {
+        $sql = '';
+
+        $sql = "UPDATE " . $table . " SET ";
+
+        //sanitize $data with escape function
+        foreach ($data as $i => $v) {
+            $v = $this->escape($v);
+            $i = $this->escape($i);
+
+            $sql .= "`" . $i . "`='" . $v . "', ";
+        }
+        $sql = rtrim($sql, ", ");
+        $sql .= " WHERE " . $condition;
+
+        $query = $this->query($sql);
+
+        $ret = array();
+
+        if ($query !== false) {
+            $ret['success'] = true;
+        } else {
+            if($this->captured_errors){
+                foreach ($this->captured_errors as $i => $e) {
+                    $ret['error'][] = $e['error_str'];
+                }
+            }
+            else $ret['error'][] = 'Undefined error occurred.';
+        }
+
+        return $ret;
     }
 }
